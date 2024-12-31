@@ -1,7 +1,13 @@
+import sys
+sys.path.append('c:\sc\db')
 import socket
 import datetime
 import struct
 from threading import Thread
+import odb
+import time
+
+
 
 IEC_IP = 'localhost'
 IEC_PORT = 2400
@@ -9,7 +15,12 @@ IEC_BUFFER = 1024
 
 # Получить адрес
 def get_addr(addr):
-    return list(addr)
+    res = 0
+    if len(addr) == 3:
+        res = addr[0] + (addr[1]<<8) + (addr[2]<<16)
+    if len(addr) == 2:
+        res = addr[0] + (addr[1]<<8)
+    return int(res)
 
 # Получить значение с плавающей точкой
 def get_float(val):
@@ -31,14 +42,18 @@ def get_time_cp56(cp56):
     d = list(cp56)
     s = d[1]<<8
     s = s + d[0]
+    fs = None
     try:
-        f=datetime.datetime(d[6] + 2000, d[5], d[4], d[3], d[2], s//1000, s%1000*1000)
+        f=datetime.datetime(d[6] + 2000, d[5], d[4], d[3], d[2], s//1000, s%1000*1000).timestamp()
+        t0 = time.time()
+        if f < t0 - 0.01 or f > t0 + 0.01:
+            fs = f-time.time()
     except:
         print("ошибка. во время передачи ", d)
-        f = ''
-    return f
+        f = 0.0
+    return f, fs
 
-# Разбить пакет на части по типам кадрам
+# Разбить пакет на части по типам кадров
 def split_pack(frm):
     frm = list(frm)
     start_idx = 0
@@ -96,8 +111,8 @@ def iec36(frm):
         addr = get_addr(frm[addr_start + shift:addr_end + shift])
         value = get_float(frm[val_start + shift:val_end+shift])
         inv = frm[inv_start + shift]
-        date = get_time_cp56(frm[date_start + shift: date_end + shift])
-        out += f'{addrh}.{addr}\t{value}\t{inv}\t{date}\n'
+        date, tsrv = get_time_cp56(frm[date_start + shift: date_end + shift])
+        out += f'{addrh}.{addr}\t{value}\t{inv}\t{date}\t{tsrv}\n'
         shift = shift + pack_len
         if addr_start + shift >= len(frm):
             break
@@ -111,16 +126,27 @@ func[36] = iec36
 kp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 kp.connect((IEC_IP,IEC_PORT))
 tu = Thread(target=send_command, args=(kp,))
-tu.start()
+#tu.start()
 pack_init = bytes((104, 4, 7, 0, 0, 0))
 pack_ack = pack_init
 print('connect')
+db = odb.ScODB('oper.db')
+conf = db.get_config()
+
+n = 0
 with open('log.txt', 'a+') as f_log:
     while True:
         kp.send(pack_ack)
         frm = kp.recv(IEC_BUFFER)
         pack_ack = frm 
         out = split_pack(frm)
+        if n % 1000 == 0:
+            out += f"==========={time.time()},{n} packets ==================\n"
         if out != '':
             f_log.write(out)
             f_log.flush()
+        n += 1
+
+
+  
+  

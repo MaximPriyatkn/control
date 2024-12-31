@@ -1,0 +1,13 @@
+-- database: ../oper.db
+
+CREATE TABLE float_val (id INTEGER PRIMARY KEY, val FLOAT, tstamp FLOAT);
+CREATE INDEX `idx_float_val_id` ON `float_val` (`id`);
+CREATE TABLE int_val (id INTEGER PRIMARY KEY, val INTEGER, tstamp FLOAT);
+CREATE INDEX `idx_int_val_id` ON `int_val` (`id`);
+CREATE TABLE invalid (id INTEGER PRIMARY KEY, val INTEGER, tstamp FLOAT);
+CREATE INDEX `invalid_id` ON `invalid` (`id`);
+COMMIT;
+CREATE TABLE "conf_iec"(`id` INTEGER PRIMARY KEY, ` name` TEXT, ` type` INTEGER, ` ha` INTEGER, ` la` INTEGER, ` addr` TEXT);
+CREATE INDEX `idx_conf_iec_ type` ON `conf_iec` (` type`);
+CREATE INDEX `idx_conf_iec_ ha` ON `conf_iec` (` ha`);
+CREATE INDEX `idx_conf_iec_ la` ON `conf_iec` (` la`);
