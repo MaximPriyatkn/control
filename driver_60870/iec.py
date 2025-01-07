@@ -101,6 +101,8 @@ def init_client(conf):
                     th_rcv.start()
                     th_que = threading.Thread(target=get_queue_recv)
                     th_que.start()
+                    th_db = threading.Thread(target=read_db)
+                    th_db.start()
                 elif len(apdu) > 6 and apdu[6] == 100:
                     if n == 0: 
                         sock.send(bytes([104, 4, 1, 0, 10, 0]))
@@ -116,7 +118,8 @@ def init_client(conf):
                     cnt = [None, None]
                     if n == len(s_frm) - 1:
                        cnt = [apdu[2],apdu[3]]
-                    recv_client(sock, apdu, cnt)
+                    if len(apdu) > 6:
+                        recv_client(sock, apdu, cnt)
         except Exception as e:
             print (e, cnt, apdu)
             is_conn = False
@@ -130,14 +133,23 @@ def get_queue_recv():
     while is_conn:
         while not q_recv.empty():
             frm = q_recv.get()
-            for val in asdu_unpack[frm[6]](frm):   
-                q_out.put(val)
-        flush_buffer()
+            try:
+                for val in asdu_unpack[frm[6]](frm):   
+                    q_out.put(val)
+            except Exception as e:
+                print(e)
+                print(list(frm))
+        if not q_out.empty():
+            flush_buffer()
+        time.sleep(0.001)
  
 
 def send_client(sock):
     while is_conn:
-        time.sleep(10)
+        while not q_out.empty():
+            frm = q_out.get()
+            sock.send(bytes(frm))
+        time.sleep(0.001)
 
 
 def recv_client(sock, asdu, cnt):

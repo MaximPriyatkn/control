@@ -1,0 +1,5 @@
+-- database: c:\sc\driver_60870\oper.db
+
+UPDATE int_val 
+SET direct = 5
+

@@ -1,6 +1,7 @@
 import logging
 import queue
 import time
+import sqlite3
 from asdu import *
 
 FRM_START_ACT = bytes([104, 4, 7, 0, 0, 0])
@@ -18,10 +19,11 @@ CONF_DEFAULT = {"IP":"192.168.2.52",
                         "PORT":2400,
                         "CONN":0,
                         "TIMEOUT":10}
-PRINT_LVL = 1
+PRINT_LVL = -1
 
 q_recv = queue.Queue()
 q_out = queue.Queue()
+q_in = queue.Queue()
 
 
 log = logging.getLogger(__name__)
@@ -58,7 +60,24 @@ def flush_buffer():
             flog.write(f'{q_out.get()}\n')
     
   
-
+def read_db():
+    k = 0
+    t_req = time.time()
+    with sqlite3.connect('oper.db') as conn:
+        cursor = conn.cursor()
+        sql = '''SELECT ha, la, val FROM int_val 
+                JOIN conf_iec
+                ON conf_iec.id = int_val.id 
+                WHERE int_val.tstamp >= ?
+                AND conf_iec.direct = ?'''
+        while True:
+            t0 = time.perf_counter()
+            cursor.execute(sql, (t_req,5))
+            data = cursor.fetchall()
+            print(data, t_req, time.perf_counter() - t0) 
+            t_req = time.time()
+            k += 1
+            time.sleep(1)
 
 
 

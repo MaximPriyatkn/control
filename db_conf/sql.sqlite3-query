@@ -1,0 +1,6 @@
+-- database: c:\sc\db_conf\conf.db
+
+--CREATE TABLE conf (id INTEGER PRIMARY KEY, name TEXT, descript TEXT);
+
+INSERT INTO conf (id, name)
+SELECT id, name FROM conf_iec
